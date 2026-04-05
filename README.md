@@ -1,60 +1,230 @@
-# Universal Firefly III AI Bridge (v3.0.0 DEFINITIVE)
+# Universal Firefly III AI Bridge (v3.0.0)
 
-A professional-grade, AI-agnostic bridge that provides exhaustive 100% API coverage for connecting your AI assistants to your [Firefly III](https://github.com/firefly-iii/firefly-iii) personal finance instance.
+A professional-grade, AI-agnostic bridge providing exhaustive 100% API coverage for connecting AI assistants to your [Firefly III](https://github.com/firefly-iii/firefly-iii) personal finance instance.
 
-## 🚀 One Bridge, All AIs
+**66 tools** covering every major Firefly III capability: accounts, transactions, budgets, bills, recurring rules, automation, insights, attachments, currencies, and more.
 
-This server exposes **66 Tools** to any AI platform supporting standard protocols.
+---
 
-| AI Platform | Protocol Used | Connection Type |
-| :--- | :--- | :--- |
-| **Claude / Cursor** | MCP (Native) | stdio or SSE |
-| **Gemini CLI** | MCP | stdio |
-| **ChatGPT** | OpenAPI (Actions) | REST / JSON |
-| **Custom Apps** | REST API | HTTP |
+## Compatibility
 
-## 🛠️ Key Capabilities
-- **Full CRUD Management**: Exhaustive control over Accounts, Transactions, Budgets, and Piggy Banks.
-- **Split Transactions**: Create complex entries with multiple categories and amounts (Boss Level).
-- **Power User Logic**: Support for Transaction Linking, Budget Limits, and Object Groups.
-- **System Intelligence**: AI-driven Rule management, Rule Group execution, and Webhook configuration.
-- **Data Richness**: Support for file attachments (receipts) and pre-calculated trend insights.
-- **Administration**: AI-initiated data exports and global system preferences.
+| AI Platform | Protocol | Connection | Setup Guide |
+| :--- | :--- | :--- | :--- |
+| **Claude Code** | MCP (Native) | stdio | [claude.md](claude.md) |
+| **Claude Desktop** | MCP (Native) | stdio | [claude.md](claude.md) |
+| **Gemini CLI** | MCP Extension | stdio | [gemini.md](gemini.md) |
+| **Cursor / VS Code** | MCP | stdio or SSE | Manual setup below |
+| **ChatGPT** | OpenAPI Actions | REST / JSON | `/openapi.json` endpoint |
+| **Custom Apps** | REST API | HTTP | `/api/<tool>` endpoints |
 
-## 📜 Documentation
-- [**Tool Reference (API.md)**](docs/API.md): Categorized list of all 66 tools and schemas.
-- [**Prompt Gallery (PROMPTS.md)**](docs/PROMPTS.md): Practical examples for interacting with the AI.
-- [**Advanced Use Cases (USE_CASES.md)**](docs/USE_CASES.md): Strategic guides for financial mastery.
-- [**Testing Guide (TESTING.md)**](docs/TESTING.md): How to run and write automated tests.
-- [**Gemini Manifest (gemini.md)**](gemini.md): Instructions for Gemini Agents.
+---
 
-## 🗺️ Roadmap Status: 100% COMPLETE (Exhaustive Mastery)
-- [x] **v1.x Foundations** (Initial Connectivity)
-- [x] **v2.x Exhaustive API** (CRUD & Core Admin)
-- [x] **v3.x Power User Phase** (Advanced Logic, Splits, & Insights)
+## Installation
 
-## 📦 Installation & Usage
+### Prerequisites
 
-### 1. As a Gemini CLI Extension (Easiest)
-Install the bridge directly from GitHub:
-```powershell
+- [Node.js](https://nodejs.org/) v18 or later
+- A running [Firefly III](https://github.com/firefly-iii/firefly-iii) instance
+- A **Personal Access Token** from Firefly III  
+  *(Profile → OAuth → Personal Access Tokens → Create new token)*
+
+### Clone and install
+
+```bash
+git clone https://github.com/fabianonetto/mcp-server-firefly-iii.git
+cd mcp-server-firefly-iii
+npm install
+```
+
+---
+
+## Setup by Platform
+
+### Claude Code (Recommended)
+
+Claude Code uses `.mcp.json` in the project directory for MCP server configuration.
+
+**1. Create `.mcp.json`** in the repo root (it is gitignored — never committed):
+
+```json
+{
+  "mcpServers": {
+    "firefly-iii": {
+      "command": "node",
+      "args": ["./index.js"],
+      "env": {
+        "FIREFLY_URL": "http://your-host:PORT",
+        "FIREFLY_TOKEN": "your_personal_access_token"
+      }
+    }
+  }
+}
+```
+
+**2. Start Claude Code** from the repo directory:
+
+```bash
+claude
+```
+
+The server starts automatically. Claude Code will prompt you to approve it on first launch (once only).
+
+**3. Verify** the connection by asking:
+
+```
+Use the get_about tool
+```
+
+You should receive your Firefly III version and API information.
+
+**Using from other projects:**  
+Copy `.mcp.json` to any other project directory, changing `./index.js` to the absolute path:
+
+```json
+"args": ["/absolute/path/to/mcp-server-firefly-iii/index.js"]
+```
+
+See [claude.md](claude.md) for the full guide including auto-approval configuration.
+
+---
+
+### Claude Desktop
+
+Add the server to your Claude Desktop config file:
+
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "firefly-iii": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-server-firefly-iii/index.js"],
+      "env": {
+        "FIREFLY_URL": "http://your-host:PORT",
+        "FIREFLY_TOKEN": "your_personal_access_token"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop after saving.
+
+---
+
+### Gemini CLI Extension (One-command install)
+
+```bash
 gemini extensions install https://github.com/fabianonetto/mcp-server-firefly-iii
 ```
+
 Then configure your instance:
-```powershell
+
+```bash
 gemini config set extensions.firefly-iii-universal-bridge.settings.FIREFLY_URL "http://your-host:PORT"
 gemini config set extensions.firefly-iii-universal-bridge.settings.FIREFLY_TOKEN "your_token"
 ```
 
-### 2. Manual MCP Setup (Gemini CLI / Claude / ChatGPT)
-Set these environment variables and run with `npx`:
-```bash
-npx -y mcp-server-firefly-iii
+See [gemini.md](gemini.md) for the full guide.
+
+---
+
+### Cursor / VS Code (MCP Extension)
+
+Add to your MCP config (`.cursor/mcp.json` or equivalent):
+
+```json
+{
+  "mcpServers": {
+    "firefly-iii": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-server-firefly-iii/index.js"],
+      "env": {
+        "FIREFLY_URL": "http://your-host:PORT",
+        "FIREFLY_TOKEN": "your_personal_access_token"
+      }
+    }
+  }
+}
 ```
 
-## ✨ Created with Gemini CLI
-This project was built using **Gemini CLI vibecoding**. Feedback and contributions are always welcome!
+---
 
-## 🔒 Security
-- Use a VPN or SSH tunnel if exposing this server to the internet.
-- Ensure your `FIREFLY_TOKEN` is kept secret and has appropriate permissions.
+### HTTP / SSE Mode (ChatGPT Actions, Custom Apps)
+
+Start the server with a port to enable the REST and SSE endpoints:
+
+```bash
+FIREFLY_URL=http://your-host:PORT FIREFLY_TOKEN=your_token PORT=3000 node index.js
+```
+
+Available endpoints:
+
+| Endpoint | Description |
+| :--- | :--- |
+| `GET /sse` | SSE transport for MCP clients |
+| `POST /messages` | MCP message handler |
+| `POST /api/<tool_name>` | Direct REST call to any tool |
+| `GET /openapi.json` | OpenAPI 3.0 spec (import into ChatGPT Actions) |
+
+---
+
+## Tool Categories
+
+| Category | Tools | Description |
+| :--- | :---: | :--- |
+| Core | 1 | System info & connectivity |
+| Accounts | 5 | Full CRUD for all account types |
+| Transactions | 7 | CRUD, split transactions, search |
+| Budgets | 8 | Budgets + monetary limits |
+| Bills & Piggy Banks | 7 | Bill tracking + savings goals |
+| Automation | 11 | Rules, rule groups, webhooks |
+| Recurring | 5 | Recurring transaction rules |
+| System | 8 | Currencies + user preferences |
+| Insights | 7 | Attachments, charts, net worth, spending |
+| Meta | 4 | Categories + tags |
+| Object Groups | 2 | Account/piggy bank organization |
+| Admin | 1 | Data export |
+| **Total** | **66** | |
+
+---
+
+## Documentation
+
+| Document | Description |
+| :--- | :--- |
+| [docs/API.md](docs/API.md) | Complete reference for all 66 tools and their input schemas |
+| [docs/PROMPTS.md](docs/PROMPTS.md) | Prompt examples for common financial tasks |
+| [docs/USE_CASES.md](docs/USE_CASES.md) | Strategic guides: tax assistant, subscription auditor, receipt manager |
+| [docs/TESTING.md](docs/TESTING.md) | Test suite documentation (78 tests, all tools covered) |
+| [claude.md](claude.md) | Claude Code & Claude Desktop setup guide |
+| [gemini.md](gemini.md) | Gemini CLI extension guide |
+
+---
+
+## Running Tests
+
+```bash
+npm test
+```
+
+78 tests covering all 66 tools. No live Firefly III instance required — all API calls are mocked.
+See [docs/TESTING.md](docs/TESTING.md) for details.
+
+---
+
+## Security
+
+- Use a VPN or SSH tunnel if exposing the server to the internet.
+- Keep your `FIREFLY_TOKEN` secret. Never commit `.mcp.json` or `.env` files.
+- See [SECURITY.md](SECURITY.md) for the full security policy.
+
+---
+
+## Roadmap
+
+- [x] v1.x — Initial connectivity
+- [x] v2.x — Exhaustive API coverage (CRUD & core admin)
+- [x] v3.x — Power user features (splits, insights, automation)
