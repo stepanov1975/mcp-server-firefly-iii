@@ -6,26 +6,31 @@ MCP server bridging Firefly III personal finance manager to AI assistants. 66 to
 
 ## Quick Setup (Claude Code)
 
-**1. Create `.mcp.json`** in the repo root (gitignored — never committed):
+**1. Create `.env`** in the repo root (gitignored — never committed):
+
+```env
+FIREFLY_URL=http://your-host:PORT
+FIREFLY_TOKEN=your_personal_access_token
+```
+
+Get your token: Firefly III → **Profile → OAuth → Personal Access Tokens → Create new token**
+
+**2. Create `.mcp.json`** in the repo root (gitignored — never committed):
 
 ```json
 {
   "mcpServers": {
     "firefly-iii": {
       "command": "node",
-      "args": ["./index.js"],
-      "env": {
-        "FIREFLY_URL": "http://your-host:PORT",
-        "FIREFLY_TOKEN": "your_personal_access_token"
-      }
+      "args": ["./index.js"]
     }
   }
 }
 ```
 
-Get your token: Firefly III → **Profile → OAuth → Personal Access Tokens → Create new token**
+The server reads credentials from `.env` automatically via `dotenv`. No secrets in `.mcp.json`.
 
-**2. Start Claude Code** from this directory:
+**3. Start Claude Code** from this directory:
 
 ```bash
 claude

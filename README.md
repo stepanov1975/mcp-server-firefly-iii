@@ -42,26 +42,33 @@ npm install
 
 ### Claude Code (Recommended)
 
-Claude Code uses `.mcp.json` in the project directory for MCP server configuration.
+Claude Code uses `.mcp.json` in the project directory for MCP server configuration. Credentials go in a separate `.env` file so no secrets are ever in config files.
 
-**1. Create `.mcp.json`** in the repo root (it is gitignored — never committed):
+**1. Create `.env`** in the repo root (gitignored — never committed):
+
+```env
+FIREFLY_URL=http://your-host:PORT
+FIREFLY_TOKEN=your_personal_access_token
+```
+
+Get your token: Firefly III → **Profile → OAuth → Personal Access Tokens → Create new token**
+
+**2. Create `.mcp.json`** in the repo root (gitignored — never committed):
 
 ```json
 {
   "mcpServers": {
     "firefly-iii": {
       "command": "node",
-      "args": ["./index.js"],
-      "env": {
-        "FIREFLY_URL": "http://your-host:PORT",
-        "FIREFLY_TOKEN": "your_personal_access_token"
-      }
+      "args": ["./index.js"]
     }
   }
 }
 ```
 
-**2. Start Claude Code** from the repo directory:
+The server reads credentials from `.env` automatically. No secrets in `.mcp.json`.
+
+**3. Start Claude Code** from the repo directory:
 
 ```bash
 claude
@@ -69,7 +76,7 @@ claude
 
 The server starts automatically. Claude Code will prompt you to approve it on first launch (once only).
 
-**3. Verify** the connection by asking:
+**4. Verify** the connection by asking:
 
 ```
 Use the get_about tool
@@ -78,7 +85,7 @@ Use the get_about tool
 You should receive your Firefly III version and API information.
 
 **Using from other projects:**  
-Copy `.mcp.json` to any other project directory, changing `./index.js` to the absolute path:
+Copy both `.env` and `.mcp.json` to any other project directory, changing `./index.js` to the absolute path:
 
 ```json
 "args": ["/absolute/path/to/mcp-server-firefly-iii/index.js"]
