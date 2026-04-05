@@ -16,11 +16,6 @@ This document provides a definitive list of all 66 tools available in the Firefl
 - `delete_transaction`: Remove financial records.
 - `search_transactions`: Powerful query-based search.
 
-### 🔗 Transaction Linking (v3.0)
-- `list_link_types`: List available link relationships.
-- `link_transactions`: Create a logical link between two transaction journals.
-- `list_transaction_links`: View links for a specific transaction.
-
 ### 📉 Budget Limits (v3.0)
 - `list_budget_limits`: View monetary limits for specific periods.
 - `create_budget_limit`: Set a new limit for a budget.
@@ -89,7 +84,10 @@ This document provides a definitive list of all 66 tools available in the Firefl
 
 ### 🌍 Currencies & Preferences
 - `list_currencies`: View all defined currencies.
-- `update_currency`: Enable/disable specific currencies.
+- `get_currency`: Get a single currency by code.
+- `create_currency`: Store a new currency.
+- `update_currency`: Enable/disable or update a currency.
+- `delete_currency`: Remove a currency.
 - `list_preferences`: View user UI/system settings.
 - `get_preference`: Read a specific setting.
 - `update_preference`: Change system behavior.

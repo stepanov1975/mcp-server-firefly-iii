@@ -9,8 +9,8 @@ This guide provides example prompts for all tools available in the AI Bridge.
 - *"Update the description of my last transaction to 'Monthly Rent (Corrected)'."*
 
 ## 🔗 Advanced Logic (v3.0)
-- *"Link my last transaction to transaction ID 123 as a 'reimbursement'."*
 - *"Set a $500 limit for my 'Dining Out' budget for this month."*
+- *"Create a recurring monthly withdrawal of $15.99 called 'Netflix'."*
 
 ## 📁 Organization & Mastery (v3.0)
 - *"List all my object groups."*

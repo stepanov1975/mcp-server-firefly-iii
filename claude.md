@@ -1,8 +1,12 @@
-# Firefly III MCP Server — Claude Code Integration (v3.0.0)
+# Firefly III MCP Server — Claude Code Guide
 
-## Setup
+MCP server bridging Firefly III personal finance manager to AI assistants. 66 tools, Node.js, fully tested (78 tests).
 
-**1. Fill in your credentials in `.mcp.json`:**
+---
+
+## Quick Setup (Claude Code)
+
+**1. Create `.mcp.json`** in the repo root (gitignored — never committed):
 
 ```json
 {
@@ -11,45 +15,143 @@
       "command": "node",
       "args": ["./index.js"],
       "env": {
-        "FIREFLY_URL": "http://YOUR_HOST:YOUR_PORT",
-        "FIREFLY_TOKEN": "YOUR_TOKEN"
+        "FIREFLY_URL": "http://your-host:PORT",
+        "FIREFLY_TOKEN": "your_personal_access_token"
       }
     }
   }
 }
 ```
 
-**2. Start Claude Code from this directory:**
+Get your token: Firefly III → **Profile → OAuth → Personal Access Tokens → Create new token**
 
-```powershell
+**2. Start Claude Code** from this directory:
+
+```bash
 claude
 ```
 
-The `firefly-iii` server is auto-approved via `~/.claude/settings.json`.
+The server starts automatically. On first launch Claude Code asks for approval (once only). To skip the prompt, add `"enabledMcpjsonServers": ["firefly-iii"]` to `~/.claude/settings.json`.
 
-## Using from other projects
+**3. Verify** the connection:
 
-Copy `.mcp.json` to any project directory, updating the `args` path to absolute:
+```
+Use the get_about tool
+```
+
+You should receive your Firefly III version and API information. An `Unauthenticated` error means the token in `.mcp.json` is still the placeholder — update it with your real token.
+
+---
+
+## Using from Other Projects
+
+Copy `.mcp.json` with an absolute path so Claude Code can find the server from any directory:
 
 ```json
 {
   "mcpServers": {
     "firefly-iii": {
       "command": "node",
-      "args": ["W:/ai/firefly-iii/mcp-server/index.js"],
+      "args": ["C:/absolute/path/to/mcp-server-firefly-iii/index.js"],
       "env": {
-        "FIREFLY_URL": "http://YOUR_HOST:YOUR_PORT",
-        "FIREFLY_TOKEN": "YOUR_TOKEN"
+        "FIREFLY_URL": "http://your-host:PORT",
+        "FIREFLY_TOKEN": "your_personal_access_token"
       }
     }
   }
 }
 ```
 
-## Verify connection
+---
+
+## Claude Desktop Setup
+
+Config file locations:
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "firefly-iii": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-server-firefly-iii/index.js"],
+      "env": {
+        "FIREFLY_URL": "http://your-host:PORT",
+        "FIREFLY_TOKEN": "your_personal_access_token"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop after saving.
+
+---
+
+## Project Commands
+
+```bash
+npm test                   # Run 78-test suite (all mocked, no live Firefly needed)
+node index.js              # Start in stdio mode (MCP clients: Claude Code, Gemini CLI)
+PORT=3000 node index.js    # Start in HTTP/SSE mode (ChatGPT Actions, REST clients)
+```
+
+---
+
+## Architecture
 
 ```
-> get_about
+index.js              # Entry point: MCP server + Express HTTP/SSE mode
+src/
+  config.js           # Reads env vars, creates axios apiClient with Bearer auth
+  tools/
+    core.js           # get_about (1)
+    accounts.js       # CRUD (5)
+    transactions.js   # CRUD + split + search (7)
+    budgets.js        # Budgets + limits CRUD (8)
+    automation.js     # Rules, rule groups, webhooks (11)
+    system.js         # Currencies + preferences CRUD (8)
+    insights.js       # Attachments + analytics (7)
+    meta.js           # Categories + tags (4)
+    bills.js          # Bills + piggy banks CRUD (7)
+    groups.js         # Object groups (2)
+    recurring.js      # Recurring transactions CRUD (5)
+    admin.js          # trigger_export (1)
 ```
 
-Should return Firefly III system info and version.
+Each tool file exports an array of `{ name, description, inputSchema, handler }` objects. `index.js` merges them all into a single `TOOLS` registry and registers MCP handlers.
+
+---
+
+## Adding a New Tool
+
+1. Add the tool object to the relevant `src/tools/*.js` file
+2. Update the tool count assertion in `index.test.js`: `expect(TOOLS.length).toBe(66)` → new count
+3. Add a test: verify HTTP method, URL path, and request payload
+4. Update `docs/API.md`
+
+---
+
+## Key Gotchas
+
+**`.mcp.json` is gitignored** — it holds real credentials. Never commit it.
+
+**Query params must use axios `{ params }` option**, not string interpolation. `apiClient.get(\`/path?x=${x}\`)` causes 404s from the mock adapter and can break reverse proxies. Always use `apiClient.get("/path", { params: { x } })`.
+
+**Tool count is enforced in tests.** Adding or removing a tool without updating `expect(TOOLS.length).toBe(66)` fails the suite — intentional guard.
+
+**stdio vs HTTP mode** — without `PORT` the server speaks MCP over stdin/stdout. With `PORT` it starts Express with `/sse`, `/messages`, `/api/<tool>`, and `/openapi.json`.
+
+**`Unauthenticated` on startup is normal** if the token is still the placeholder. The server connects successfully; tool calls fail at the Firefly III API level, not at the MCP level.
+
+---
+
+## Testing
+
+```bash
+npm test
+```
+
+78 tests, 15 describe blocks, all 66 tools covered. No live Firefly III required.
+See [`docs/TESTING.md`](docs/TESTING.md) for the full coverage table.
