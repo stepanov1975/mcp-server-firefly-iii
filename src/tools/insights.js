@@ -15,13 +15,28 @@ const insightsTools = [
   },
   {
     name: "upload_attachment",
-    description: "Upload a file.",
+    description: "Upload a file and attach it to a Firefly III object (e.g. a transaction). Requires two steps internally: creates the attachment record, then uploads the file content.",
     inputSchema: {
       type: "object",
-      properties: { filename: { type: "string" }, attachable_type: { type: "string" }, attachable_id: { type: "string" }, content: { type: "string" } },
+      properties: {
+        filename: { type: "string" },
+        attachable_type: { type: "string", description: "e.g. 'TransactionJournal'" },
+        attachable_id: { type: "string", description: "ID of the object to attach to" },
+        content: { type: "string", description: "Base64-encoded file content" }
+      },
       required: ["filename", "attachable_type", "attachable_id", "content"]
     },
-    handler: async (args) => (await apiClient.post("/attachments", args)).data
+    handler: async (args) => {
+      const { content, ...meta } = args;
+      const createResponse = await apiClient.post("/attachments", meta);
+      const attachmentId = createResponse.data?.data?.id;
+      if (!attachmentId) throw new Error("Attachment record created but no ID returned.");
+      const buffer = Buffer.from(content, "base64");
+      await apiClient.post(`/attachments/${attachmentId}/upload`, buffer, {
+        headers: { "Content-Type": "application/octet-stream" }
+      });
+      return { message: "Attachment uploaded successfully.", id: attachmentId };
+    }
   },
   {
     name: "delete_attachment",
@@ -53,7 +68,7 @@ const insightsTools = [
   },
   {
     name: "get_spending_summary",
-    description: "Get spending summary by category.",
+    description: "Get expense totals per category for a date range.",
     inputSchema: {
       type: "object",
       properties: {
@@ -62,7 +77,7 @@ const insightsTools = [
       },
       required: ["start", "end"]
     },
-    handler: async (args) => (await apiClient.get("/summary/category", { params: { start: args.start, end: args.end } })).data
+    handler: async (args) => (await apiClient.get("/insight/expense/category", { params: { start: args.start, end: args.end } })).data
   }
 ];
 
