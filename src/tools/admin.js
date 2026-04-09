@@ -14,9 +14,7 @@ const adminTools = [
       required: ["start", "end"]
     },
     handler: async (args) => {
-      // Endpoint for export is usually custom or requires specific setup
-      // We map this to the most common Firefly III export pattern
-      await apiClient.post("/export/transactions", args);
+      await apiClient.post("/data/export/transactions", args);
       return { message: "Data export initiated successfully." };
     }
   }

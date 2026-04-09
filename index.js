@@ -39,6 +39,9 @@ const TOOLS = [
   ...adminTools
 ];
 
+// O(1) lookup map — avoids linear scan on every tool call
+const TOOL_MAP = new Map(TOOLS.map(t => [t.name, t]));
+
 // --- MCP Server Implementation ---
 const mcpServer = new Server(
   { name: "mcp-server-firefly-iii", version: "3.0.0" },
@@ -50,13 +53,16 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => ({
 }));
 
 mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const tool = TOOLS.find(t => t.name === request.params.name);
+  const tool = TOOL_MAP.get(request.params.name);
   try {
     if (!tool) throw new Error(`Tool not found: ${request.params.name}`);
     const result = await tool.handler(request.params.arguments || {});
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   } catch (error) {
-    return { isError: true, content: [{ type: "text", text: error.response ? JSON.stringify(error.response.data) : error.message }] };
+    // Sanitize error: extract message/errors fields only — avoid leaking raw stack traces
+    const errData = error.response?.data;
+    const message = errData?.message || (errData?.errors ? JSON.stringify(errData.errors) : null) || error.message;
+    return { isError: true, content: [{ type: "text", text: String(message) }] };
   }
 });
 
@@ -66,6 +72,7 @@ async function runServer() {
     const app = express();
     app.use(express.json());
 
+    // Note: only one SSE client is supported at a time; a new connection replaces the previous one.
     let transport;
     app.get("/sse", async (req, res) => {
       transport = new SSEServerTransport("/messages", res);
@@ -74,6 +81,16 @@ async function runServer() {
     app.post("/messages", async (req, res) => {
       if (transport) await transport.handlePostMessage(req, res);
     });
+
+    // Optional API key auth for /api/* routes (set SERVER_API_KEY env var to enable)
+    if (process.env.SERVER_API_KEY) {
+      app.use("/api", (req, res, next) => {
+        if (req.headers["x-api-key"] !== process.env.SERVER_API_KEY) {
+          return res.status(401).json({ error: "Unauthorized" });
+        }
+        next();
+      });
+    }
 
     TOOLS.forEach(tool => {
       app.all(`/api/${tool.name}`, async (req, res) => {

@@ -17,6 +17,7 @@ if (!FIREFLY_URL || !FIREFLY_TOKEN) {
 const baseUrl = (FIREFLY_URL || "").replace(/\/+$/, "");
 const apiClient = axios.create({
   baseURL: `${baseUrl}/api/v1`,
+  timeout: 30000,
   headers: {
     Authorization: `Bearer ${FIREFLY_TOKEN}`,
     Accept: "application/json",
@@ -24,12 +25,14 @@ const apiClient = axios.create({
   },
 });
 
-// Debug interceptor to capture raw outgoing requests
-apiClient.interceptors.request.use(config => {
-  console.error(`DEBUG: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
-  if (config.params) console.error(`DEBUG PARAMS: ${JSON.stringify(config.params)}`);
-  return config;
-});
+// Debug interceptor — only active when DEBUG env var is set
+if (process.env.DEBUG) {
+  apiClient.interceptors.request.use(config => {
+    console.error(`DEBUG: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
+    if (config.params) console.error(`DEBUG PARAMS: ${JSON.stringify(config.params)}`);
+    return config;
+  });
+}
 
 module.exports = {
   FIREFLY_URL,

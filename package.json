@@ -19,6 +19,26 @@
   ],
   "author": "Fabiano Netto",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "index.js",
+    "src/",
+    "README.md",
+    "CLAUDE.md",
+    "gemini.md",
+    "docs/",
+    ".env.example"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fabianonetto/mcp-server-firefly-iii.git"
+  },
+  "homepage": "https://github.com/fabianonetto/mcp-server-firefly-iii#readme",
+  "bugs": {
+    "url": "https://github.com/fabianonetto/mcp-server-firefly-iii/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",
     "axios": "^1.14.0",

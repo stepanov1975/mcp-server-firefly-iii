@@ -10,8 +10,8 @@ A professional-grade, AI-agnostic bridge providing exhaustive 100% API coverage 
 
 | AI Platform | Protocol | Connection | Setup Guide |
 | :--- | :--- | :--- | :--- |
-| **Claude Code** | MCP (Native) | stdio | [claude.md](claude.md) |
-| **Claude Desktop** | MCP (Native) | stdio | [claude.md](claude.md) |
+| **Claude Code** | MCP (Native) | stdio | [CLAUDE.md](CLAUDE.md) |
+| **Claude Desktop** | MCP (Native) | stdio | [CLAUDE.md](CLAUDE.md) |
 | **Gemini CLI** | MCP Extension | stdio | [gemini.md](gemini.md) |
 | **Cursor / VS Code** | MCP | stdio or SSE | Manual setup below |
 | **ChatGPT** | OpenAPI Actions | REST / JSON | `/openapi.json` endpoint |
@@ -91,7 +91,7 @@ Copy both `.env` and `.mcp.json` to any other project directory, changing `./ind
 "args": ["/absolute/path/to/mcp-server-firefly-iii/index.js"]
 ```
 
-See [claude.md](claude.md) for the full guide including auto-approval configuration.
+See [CLAUDE.md](CLAUDE.md) for the full guide including auto-approval configuration.
 
 ---
 
@@ -206,7 +206,7 @@ Available endpoints:
 | [docs/PROMPTS.md](docs/PROMPTS.md) | Prompt examples for common financial tasks |
 | [docs/USE_CASES.md](docs/USE_CASES.md) | Strategic guides: tax assistant, subscription auditor, receipt manager |
 | [docs/TESTING.md](docs/TESTING.md) | Test suite documentation (78 tests, all tools covered) |
-| [claude.md](claude.md) | Claude Code & Claude Desktop setup guide |
+| [CLAUDE.md](CLAUDE.md) | Claude Code & Claude Desktop setup guide |
 | [gemini.md](gemini.md) | Gemini CLI extension guide |
 
 ---
