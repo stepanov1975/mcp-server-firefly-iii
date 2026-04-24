@@ -156,7 +156,8 @@ describe("Transactions", () => {
     expect(body.error_if_duplicate_hash).toBe(false);
     expect(body.transactions[0].type).toBe("withdrawal");
     expect(body.transactions[0].amount).toBe("50.00");
-    expect(body.transactions[0].date).toBeDefined();
+    // Date should be YYYY-MM-DD, not a full ISO 8601 timestamp
+    expect(body.transactions[0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   test("create_transaction: uses provided date", async () => {
@@ -182,6 +183,8 @@ describe("Transactions", () => {
     expect(body.group_title).toBe("Groceries");
     expect(body.transactions.length).toBe(2);
     expect(body.transactions[0].amount).toBe("20");
+    // Dates on splits should be YYYY-MM-DD
+    expect(body.transactions[0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   test("update_transaction: PUT /transactions/:id, strips id from body", async () => {
@@ -427,11 +430,18 @@ describe("Insights", () => {
     expect(mock.history.get[0].url).toBe("/attachments/11");
   });
 
-  test("upload_attachment: POST /attachments", async () => {
-    mock.onPost("/attachments").reply(201, { id: 12 });
-    await t("upload_attachment").handler({ filename: "receipt.jpg", attachable_type: "TransactionJournal", attachable_id: "5", content: "base64==" });
-    const body = JSON.parse(mock.history.post[0].data);
-    expect(body.filename).toBe("receipt.jpg");
+  test("upload_attachment: two-step POST /attachments then POST /attachments/:id/upload", async () => {
+    mock.onPost("/attachments").reply(201, { data: { id: "12" } });
+    mock.onPost("/attachments/12/upload").reply(200, {});
+    const result = await t("upload_attachment").handler({ filename: "receipt.jpg", attachable_type: "TransactionJournal", attachable_id: "5", content: "aGVsbG8=" });
+    // First call creates the metadata record
+    expect(mock.history.post[0].url).toBe("/attachments");
+    const meta = JSON.parse(mock.history.post[0].data);
+    expect(meta.filename).toBe("receipt.jpg");
+    expect(meta.content).toBeUndefined(); // content must NOT be sent in metadata step
+    // Second call uploads the binary content
+    expect(mock.history.post[1].url).toBe("/attachments/12/upload");
+    expect(result.id).toBe("12");
   });
 
   test("delete_attachment: DELETE /attachments/:id", async () => {
@@ -455,10 +465,10 @@ describe("Insights", () => {
     expect(result.net_worth).toBe("5000");
   });
 
-  test("get_spending_summary: GET /summary/category with params", async () => {
-    mock.onGet("/summary/category").reply(200, { data: [] });
+  test("get_spending_summary: GET /insight/expense/category with params", async () => {
+    mock.onGet("/insight/expense/category").reply(200, { data: [] });
     await t("get_spending_summary").handler({ start: "2024-01-01", end: "2024-12-31" });
-    expect(mock.history.get[0].url).toBe("/summary/category");
+    expect(mock.history.get[0].url).toBe("/insight/expense/category");
     expect(mock.history.get[0].params).toEqual({ start: "2024-01-01", end: "2024-12-31" });
   });
 });
@@ -608,10 +618,10 @@ describe("Recurring Transactions", () => {
 // 14. ADMIN
 // ---------------------------------------------------------------------------
 describe("Admin", () => {
-  test("trigger_export: POST /export/transactions", async () => {
-    mock.onPost("/export/transactions").reply(200, {});
+  test("trigger_export: POST /data/export/transactions", async () => {
+    mock.onPost("/data/export/transactions").reply(200, {});
     const result = await t("trigger_export").handler({ start: "2024-01-01", end: "2024-12-31" });
-    expect(mock.history.post[0].url).toBe("/export/transactions");
+    expect(mock.history.post[0].url).toBe("/data/export/transactions");
     const body = JSON.parse(mock.history.post[0].data);
     expect(body.start).toBe("2024-01-01");
     expect(result.message).toMatch(/successfully/i);

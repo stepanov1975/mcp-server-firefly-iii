@@ -26,14 +26,15 @@ const transactionsTools = [
         destination_name: { type: "string" },
         category_name: { type: "string" },
         tags: { type: "array", items: { type: "string" } },
-        date: { type: "string" }
+        date: { type: "string", description: "YYYY-MM-DD format. Defaults to today." }
       },
       required: ["type", "amount", "description", "source_name", "destination_name"]
     },
     handler: async (args) => {
+      const today = new Date().toISOString().split('T')[0];
       const payload = {
         error_if_duplicate_hash: false,
-        transactions: [{ ...args, date: args.date || new Date().toISOString() }]
+        transactions: [{ ...args, date: args.date || today }]
       };
       await apiClient.post("/transactions", payload);
       return { message: "Transaction created successfully." };
@@ -68,7 +69,7 @@ const transactionsTools = [
     handler: async (args) => {
       const payload = {
         group_title: args.group_title,
-        transactions: args.splits.map(s => ({ ...s, date: new Date().toISOString() }))
+        transactions: args.splits.map(s => ({ ...s, date: s.date || new Date().toISOString().split('T')[0] }))
       };
       await apiClient.post("/transactions", payload);
       return { message: "Split transaction created successfully." };
