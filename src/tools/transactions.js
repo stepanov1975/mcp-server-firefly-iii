@@ -76,10 +76,15 @@ const transactionsTools = [
   },
   {
     name: "update_transaction",
-    description: "Update an existing transaction group.",
+    description: "Update an existing transaction. Supports updating description, category_name, and other fields.",
     inputSchema: {
       type: "object",
-      properties: { id: { type: "string" }, description: { type: "string" } },
+      properties: {
+        id: { type: "string" },
+        description: { type: "string" },
+        category_name: { type: "string", description: "Category name to assign to the transaction." },
+        tags: { type: "array", items: { type: "string" } }
+      },
       required: ["id"]
     },
     handler: async (args) => {
