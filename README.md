@@ -275,3 +275,4 @@ See [docs/TESTING.md](docs/TESTING.md) for details.
 - [x] v1.x — Initial connectivity
 - [x] v2.x — Exhaustive API coverage (CRUD & core admin)
 - [x] v3.x — Power user features (splits, insights, automation)
+- [x] v3.1.0 — Official Docker image & CI/CD

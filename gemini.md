@@ -22,6 +22,7 @@ This project is a 100% sanitized, professional-grade, AI-agnostic bridge connect
 - [x] Automation, Rules & Webhooks.
 - [x] Attachments & Advanced Insights.
 - [x] Power User logic: Linking, Limits, Groups, and Split Transactions.
+- [x] Official Docker Image & GitHub Actions CI/CD.
 
 ## 🛠️ Global Setup Instructions
 ```powershell
