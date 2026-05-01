@@ -99,7 +99,9 @@ Restart Claude Desktop after saving.
 ```bash
 npm test                   # Run 78-test suite (all mocked, no live Firefly needed)
 node index.js              # Start in stdio mode (MCP clients: Claude Code, Gemini CLI)
-PORT=3000 node index.js    # Start in HTTP/SSE mode (ChatGPT Actions, REST clients)
+PORT=3001 node index.js    # Start in HTTP/SSE mode (ChatGPT Actions, REST clients)
+docker build -t mcp .      # Build Docker image
+docker run -p 3001:3001 -e FIREFLY_URL=... -e FIREFLY_TOKEN=... -e PORT=3001 mcp # Run SSE mode
 ```
 
 ---
