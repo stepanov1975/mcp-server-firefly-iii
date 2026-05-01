@@ -1,0 +1,14 @@
+node_modules
+.env
+.git
+.gitignore
+*.test.js
+docs
+package-lock.json
+README.md
+CLAUDE.md
+gemini.md
+SECURITY.md
+gemini-extension.json
+.claude
+.gemini_security

@@ -138,6 +138,46 @@ See [gemini.md](gemini.md) for the full guide.
 
 ---
 
+### Docker (Official Image)
+
+The official image is available on GitHub Packages: `ghcr.io/fabianonetto/mcp-server-firefly-iii`.
+
+#### Run as a service (SSE Mode)
+Ideal for ChatGPT Actions, Cursor (SSE), or custom integrations.
+
+```bash
+docker run -d \
+  --name firefly-mcp \
+  -p 3001:3001 \
+  -e FIREFLY_URL="http://your-firefly-instance" \
+  -e FIREFLY_TOKEN="your_personal_access_token" \
+  -e PORT=3001 \
+  ghcr.io/fabianonetto/mcp-server-firefly-iii:latest
+```
+
+#### Run with Claude Desktop (stdio Mode)
+Add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "firefly-iii": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e", "FIREFLY_URL=http://your-host:PORT",
+        "-e", "FIREFLY_TOKEN=your_token",
+        "ghcr.io/fabianonetto/mcp-server-firefly-iii:latest"
+      ]
+    }
+  }
+}
+```
+
+---
+
 ### Cursor / VS Code (MCP Extension)
 
 Add to your MCP config (`.cursor/mcp.json` or equivalent):
