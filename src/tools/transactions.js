@@ -8,6 +8,9 @@ const DEFAULT_REVIEW_REMOVE_TAGS = [
   "new-merchant",
   "foreign-new-merchant",
   "high-value-new-merchant",
+  "known-merchant-abnormal-amount",
+  "small-unknown-cluster",
+  "unexpected-payment",
   "duplicate-looking",
   "fee-or-interest"
 ];
@@ -84,12 +87,26 @@ function sameText(left, right) {
   return String(left || "").trim().toLocaleLowerCase() === String(right || "").trim().toLocaleLowerCase();
 }
 
+function moneyCents(value) {
+  const match = String(value || "").replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+  if (!match) return null;
+  const numeric = Number(match[0]);
+  return Number.isFinite(numeric) ? Math.round(numeric * 100) : null;
+}
+
+function rowMatchesSourceDocument(row, sourceDocumentId) {
+  if (!sourceDocumentId) return true;
+  const expected = String(sourceDocumentId);
+  if (String(row.source_document_id || "") === expected) return true;
+  return Array.isArray(row.tags) && row.tags.includes(`source-paperless-${expected}`);
+}
+
 function filterCompactRows(rows, args) {
   const externalIds = new Set(uniqueStrings(args.external_ids));
   const requiredTags = uniqueStrings(args.tags);
   return rows.filter(row => {
     if (externalIds.size && !externalIds.has(String(row.external_id || ""))) return false;
-    if (args.source_document_id && String(row.source_document_id || "") !== String(args.source_document_id)) return false;
+    if (!rowMatchesSourceDocument(row, args.source_document_id)) return false;
     if (args.statement_date && String(row.statement_date || "") !== String(args.statement_date)) return false;
     if (args.source_name && !sameText(row.source_name, args.source_name)) return false;
     if (args.destination_name && !sameText(row.destination_name, args.destination_name)) return false;
@@ -104,6 +121,10 @@ async function getTransactionsCompact(args) {
   const includeNotes = Boolean(args.include_notes);
   const ids = uniqueStrings(args.ids);
   let rows = [];
+  let pagesFetched = 0;
+  let totalPages = null;
+  let maxPages = null;
+  let truncated = false;
   if (ids.length) {
     for (const id of ids) {
       const payload = (await apiClient.get(`/transactions/${id}`)).data;
@@ -111,9 +132,9 @@ async function getTransactionsCompact(args) {
     }
   } else {
     const limit = Number(args.limit || 100);
-    const maxPages = Number(args.max_pages || 10);
+    maxPages = Number(args.max_pages || 10);
     let page = 1;
-    let totalPages = 1;
+    totalPages = 1;
     while (page <= totalPages && page <= maxPages) {
       const params = { limit, page };
       if (args.start) params.start = args.start;
@@ -123,11 +144,13 @@ async function getTransactionsCompact(args) {
       rows.push(...compactRowsFromPayload(payload, { includeNotes }));
       const pagination = payload?.meta?.pagination || {};
       totalPages = Number(pagination.total_pages || pagination.totalPages || page);
+      pagesFetched += 1;
       page += 1;
     }
+    truncated = totalPages > maxPages;
   }
   const filtered = filterCompactRows(rows, args);
-  return { count: filtered.length, transactions: filtered };
+  return { count: filtered.length, pages_fetched: pagesFetched, total_pages: totalPages, max_pages: maxPages, truncated, transactions: filtered };
 }
 
 function matchesPattern(tag, pattern) {
@@ -171,6 +194,44 @@ function transactionPayloadWithTags(transaction, tags) {
   };
   if (transaction.category_name) payloadRow.category_name = transaction.category_name;
   return { apply_rules: false, fire_webhooks: false, transactions: [payloadRow] };
+}
+
+function reviewDecisionIdentityMismatches(decision, transaction) {
+  const mismatches = [];
+  const expectedExternalId = decision.external_id;
+  const expectedStatementRowId = decision.statement_row_id;
+  if ((expectedExternalId === undefined || expectedExternalId === null || expectedExternalId === "") &&
+      (expectedStatementRowId === undefined || expectedStatementRowId === null || expectedStatementRowId === "")) {
+    return ["identity"];
+  }
+  const notes = parseNotes(transaction.notes);
+  const sourceRowMatches = expectedStatementRowId !== undefined && expectedStatementRowId !== null && expectedStatementRowId !== "" &&
+      String(notes.statement_row_id || "") === String(expectedStatementRowId);
+  if (expectedExternalId !== undefined && expectedExternalId !== null && expectedExternalId !== "" &&
+      String(transaction.external_id || "") !== String(expectedExternalId) && !sourceRowMatches) {
+    mismatches.push("external_id");
+  }
+  const noteFields = ["statement_row_id", "source_document_id", "issuer", "card_last4"];
+  for (const field of noteFields) {
+    const expected = field === "statement_row_id" ? expectedStatementRowId : decision[field];
+    if (expected !== undefined && expected !== null && expected !== "" && String(notes[field] || "") !== String(expected)) {
+      mismatches.push(field);
+    }
+  }
+  const expectedDate = decision.transaction_date || decision.date;
+  if (expectedDate && dateOnly(transaction.date) !== dateOnly(expectedDate)) mismatches.push("transaction_date");
+  const expectedAmount = decision.amount_ils || decision.amount;
+  if (expectedAmount !== undefined && expectedAmount !== null && expectedAmount !== "") {
+    const expectedCents = moneyCents(expectedAmount);
+    const transactionCents = moneyCents(transaction.amount);
+    const transactionType = String(transaction.type || "");
+    if (expectedCents !== null && transactionCents !== null) {
+      if (expectedCents < 0 && transactionType && transactionType !== "deposit") mismatches.push("type");
+      if (expectedCents > 0 && transactionType && transactionType !== "withdrawal") mismatches.push("type");
+      if (Math.abs(expectedCents) !== Math.abs(transactionCents)) mismatches.push("amount");
+    }
+  }
+  return mismatches;
 }
 
 async function updateTransactionTagsVerified(args) {
@@ -221,31 +282,60 @@ async function applyReviewDecisions(args) {
     if (!item || typeof item !== "object") continue;
     const status = String(item.status || "").toLocaleLowerCase();
     const decision = String(item.decision || "").toLocaleLowerCase();
-    if (status !== "cleared" && decision !== "approve") continue;
+    if ((status && status !== "cleared") || (!status && decision !== "approve")) continue;
     const fireflyId = item.firefly_id || item.transaction_id;
     if (!fireflyId) {
       results.push({ external_id: item.external_id || null, status: "skipped-missing-firefly-id" });
       continue;
     }
-    const result = await updateTransactionTagsVerified({
-      transaction_id: fireflyId,
+    const current = (await apiClient.get(`/transactions/${fireflyId}`)).data;
+    const transaction = firstTransaction(current);
+    const mismatches = reviewDecisionIdentityMismatches(item, transaction);
+    if (mismatches.length) {
+      results.push({
+        firefly_id: String(fireflyId),
+        external_id: item.external_id || null,
+        status: "identity-mismatch",
+        mismatched_fields: mismatches
+      });
+      continue;
+    }
+    const beforeTags = uniqueStrings(transaction.tags || []);
+    const expectedTags = tagsAfterUpdate(beforeTags, {
       remove_tags: removeTags,
       remove_prefixes: removePrefixes,
       preserve_tags: preserveTags,
-      add_tags: addTags,
-      dry_run: args.dry_run
+      add_tags: addTags
     });
+    if (args.dry_run) {
+      results.push({
+        firefly_id: String(fireflyId),
+        external_id: item.external_id || null,
+        status: "dry-run",
+        tags: expectedTags,
+        active_review_tags_left: []
+      });
+      continue;
+    }
+    await apiClient.put(`/transactions/${fireflyId}`, transactionPayloadWithTags(transaction, expectedTags));
+    const verified = (await apiClient.get(`/transactions/${fireflyId}`)).data;
+    const verifiedTags = uniqueStrings(firstTransaction(verified).tags || []);
+    const missingExpectedTags = expectedTags.filter(tag => !verifiedTags.includes(tag));
+    const activeReviewTagsLeft = verifiedTags.filter(tag => tagShouldBeRemoved(tag, removeTags, removePrefixes));
+    const ok = missingExpectedTags.length === 0 && activeReviewTagsLeft.length === 0;
     results.push({
       firefly_id: String(fireflyId),
       external_id: item.external_id || null,
-      status: result.status === "updated" ? "cleared" : result.status,
-      tags: result.after_tags || result.expected_tags || [],
-      active_review_tags_left: result.active_review_tags_left || [],
-      missing_expected_tags: result.missing_expected_tags || []
+      status: ok ? "cleared" : "verification-failed",
+      tags: verifiedTags,
+      active_review_tags_left: activeReviewTagsLeft,
+      missing_expected_tags: missingExpectedTags
     });
   }
   const failed = results.filter(item => !["cleared", "dry-run"].includes(item.status));
-  return { updated_count: results.length - failed.length, failed_count: failed.length, results };
+  const updated = results.filter(item => item.status === "cleared");
+  const dryRun = results.filter(item => item.status === "dry-run");
+  return { updated_count: updated.length, failed_count: failed.length, dry_run_count: dryRun.length, results };
 }
 
 const transactionsTools = [

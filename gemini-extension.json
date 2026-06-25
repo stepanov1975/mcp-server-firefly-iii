@@ -1,7 +1,7 @@
 {
   "name": "firefly-iii-universal-bridge",
   "version": "3.0.0",
-  "description": "Exhaustive AI Bridge for Firefly III with 66 tools for full finance mastery.",
+  "description": "AI bridge for Firefly III with 69 MCP tools.",
   "mcpServers": {
     "firefly": {
       "command": "node",

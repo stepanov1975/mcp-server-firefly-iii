@@ -1,6 +1,6 @@
 # Universal Firefly III AI Bridge (v3.0.0)
 
-A professional-grade, AI-agnostic bridge providing exhaustive 100% API coverage for connecting AI assistants to your [Firefly III](https://github.com/firefly-iii/firefly-iii) personal finance instance.
+A practical AI-agnostic bridge for connecting AI assistants to your [Firefly III](https://github.com/firefly-iii/firefly-iii) personal finance instance.
 
 **69 tools** covering every major Firefly III capability: accounts, transactions, budgets, bills, recurring rules, automation, insights, attachments, currencies, and more.
 
@@ -31,10 +31,12 @@ A professional-grade, AI-agnostic bridge providing exhaustive 100% API coverage 
 ### Clone and install
 
 ```bash
-git clone https://github.com/fabianonetto/mcp-server-firefly-iii.git
+git clone git@github.com:stepanov1975/mcp-server-firefly-iii.git
 cd mcp-server-firefly-iii
 npm install
 ```
+
+This checkout is Alex's maintained fork. Use the original upstream only when you explicitly want to compare or rebase upstream changes.
 
 ---
 
@@ -124,7 +126,7 @@ Restart Claude Desktop after saving.
 ### Gemini CLI Extension (One-command install)
 
 ```bash
-gemini extensions install https://github.com/fabianonetto/mcp-server-firefly-iii
+gemini extensions install https://github.com/stepanov1975/mcp-server-firefly-iii
 ```
 
 Then configure your instance:
@@ -138,9 +140,9 @@ See [gemini.md](gemini.md) for the full guide.
 
 ---
 
-### Docker (Official Image)
+### Docker
 
-The official image is available on GitHub Packages: `ghcr.io/fabianonetto/mcp-server-firefly-iii`.
+The upstream image is available on GitHub Packages: `ghcr.io/fabianonetto/mcp-server-firefly-iii`. It may not contain fork-only fixes; build this checkout locally when you need Alex's fork behavior.
 
 #### Run as a service (SSE Mode)
 Ideal for ChatGPT Actions, Cursor (SSE), or custom integrations.
@@ -245,7 +247,7 @@ Available endpoints:
 | [docs/API.md](docs/API.md) | Complete reference for all 69 tools and their input schemas |
 | [docs/PROMPTS.md](docs/PROMPTS.md) | Prompt examples for common financial tasks |
 | [docs/USE_CASES.md](docs/USE_CASES.md) | Strategic guides: tax assistant, subscription auditor, receipt manager |
-| [docs/TESTING.md](docs/TESTING.md) | Test suite documentation (82 tests, all tools covered) |
+| [docs/TESTING.md](docs/TESTING.md) | Test suite documentation (89 tests, all tools covered) |
 | [CLAUDE.md](CLAUDE.md) | Claude Code & Claude Desktop setup guide |
 | [gemini.md](gemini.md) | Gemini CLI extension guide |
 
@@ -257,7 +259,7 @@ Available endpoints:
 npm test
 ```
 
-82 tests covering all 69 tools. No live Firefly III instance required — all API calls are mocked.
+89 tests covering all 69 tools. No live Firefly III instance required — all API calls are mocked.
 See [docs/TESTING.md](docs/TESTING.md) for details.
 
 ---
@@ -273,6 +275,6 @@ See [docs/TESTING.md](docs/TESTING.md) for details.
 ## Roadmap
 
 - [x] v1.x — Initial connectivity
-- [x] v2.x — Exhaustive API coverage (CRUD & core admin)
+- [x] v2.x — Broad API coverage (CRUD & core admin)
 - [x] v3.x — Power user features (splits, insights, automation)
 - [x] v3.1.0 — Official Docker image & CI/CD

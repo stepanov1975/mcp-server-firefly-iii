@@ -33,11 +33,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/fabianonetto/mcp-server-firefly-iii.git"
+    "url": "https://github.com/stepanov1975/mcp-server-firefly-iii.git"
   },
-  "homepage": "https://github.com/fabianonetto/mcp-server-firefly-iii#readme",
+  "homepage": "https://github.com/stepanov1975/mcp-server-firefly-iii#readme",
   "bugs": {
-    "url": "https://github.com/fabianonetto/mcp-server-firefly-iii/issues"
+    "url": "https://github.com/stepanov1975/mcp-server-firefly-iii/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",

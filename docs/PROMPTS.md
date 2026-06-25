@@ -1,4 +1,4 @@
-# Firefly III AI Prompt Gallery (v3.0.0 DEFINITIVE)
+# Firefly III AI Prompt Gallery (v3.0.0)
 
 This guide provides example prompts for all tools available in the AI Bridge.
 

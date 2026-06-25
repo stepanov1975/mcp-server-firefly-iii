@@ -8,7 +8,7 @@ const mock = new axiosMockAdapter(apiClient);
 // Helper: find a tool by name
 const t = (name) => TOOLS.find(tool => tool.name === name);
 
-function transactionPayload({ id = "10", tags = [], notes = {}, external_id = "row-1" } = {}) {
+function transactionPayload({ id = "10", tags = [], notes = {}, external_id = "row-1", type = "withdrawal", amount = "58.72" } = {}) {
   return {
     data: {
       id,
@@ -16,9 +16,9 @@ function transactionPayload({ id = "10", tags = [], notes = {}, external_id = "r
         transactions: [
           {
             transaction_journal_id: "100",
-            type: "withdrawal",
+            type,
             date: "2026-05-06T00:00:00+03:00",
-            amount: "58.72",
+            amount,
             description: "OPENAI",
             source_name: "VISA Cal 4880",
             destination_name: "OPENAI",
@@ -235,6 +235,28 @@ describe("Transactions", () => {
     expect(mock.history.get[1].params).toEqual({ limit: 50, page: 2, start: "2026-05-01", end: "2026-05-31" });
     expect(result.count).toBe(1);
     expect(result.transactions[0].group_id).toBe("1");
+    expect(result.pages_fetched).toBe(2);
+    expect(result.total_pages).toBe(2);
+    expect(result.max_pages).toBe(5);
+    expect(result.truncated).toBe(false);
+  });
+
+  test("get_transactions_compact: source document filter also matches source-paperless tag", async () => {
+    mock.onGet("/transactions/10").reply(200, transactionPayload({
+      id: "10",
+      tags: ["credit-card", "source-paperless-2998"],
+      notes: {},
+      external_id: "ccstmt:cal:2998:row-1"
+    }));
+
+    const result = await t("get_transactions_compact").handler({
+      ids: ["10"],
+      source_document_id: "2998"
+    });
+
+    expect(result.count).toBe(1);
+    expect(result.transactions[0].group_id).toBe("10");
+    expect(result.transactions[0].source_document_id).toBeNull();
   });
 
   test("create_transaction: POST /transactions with correct envelope", async () => {
@@ -318,7 +340,16 @@ describe("Transactions", () => {
   test("apply_review_decisions: clears only approved rows and reports skipped missing IDs", async () => {
     mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
       id: "10",
-      tags: ["credit-card", "needs-investigation", "new-merchant", "risk-review", "notify-manual-review"]
+      tags: [
+        "credit-card",
+        "needs-investigation",
+        "new-merchant",
+        "known-merchant-abnormal-amount",
+        "small-unknown-cluster",
+        "unexpected-payment",
+        "risk-review",
+        "notify-manual-review"
+      ]
     }));
     mock.onPut("/transactions/10").reply(200, { ok: true });
     mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
@@ -351,6 +382,186 @@ describe("Transactions", () => {
       },
       { external_id: "row-2", status: "skipped-missing-firefly-id" }
     ]);
+  });
+
+  test("apply_review_decisions: refuses to clear stale Firefly IDs with identity mismatch", async () => {
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      external_id: "different-row",
+      tags: ["credit-card", "needs-investigation"]
+    }));
+
+    const result = await t("apply_review_decisions").handler({
+      decisions: {
+        suspicious_transactions: [
+          { firefly_id: "10", external_id: "row-1", status: "cleared" }
+        ]
+      }
+    });
+
+    expect(mock.history.get.map(req => req.url)).toEqual(["/transactions/10"]);
+    expect(mock.history.put).toHaveLength(0);
+    expect(result.updated_count).toBe(0);
+    expect(result.failed_count).toBe(1);
+    expect(result.results).toEqual([
+      {
+        firefly_id: "10",
+        external_id: "row-1",
+        status: "identity-mismatch",
+        mismatched_fields: ["external_id"]
+      }
+    ]);
+  });
+
+  test("apply_review_decisions: accepts signed refund decisions for Firefly deposits", async () => {
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      external_id: "row-1",
+      type: "deposit",
+      amount: "12.34",
+      tags: ["credit-card", "needs-investigation"]
+    }));
+    mock.onPut("/transactions/10").reply(200, { ok: true });
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      external_id: "row-1",
+      type: "deposit",
+      amount: "12.34",
+      tags: ["credit-card", "reviewed", "cleared-by-alex"]
+    }));
+
+    const result = await t("apply_review_decisions").handler({
+      decisions: {
+        suspicious_transactions: [
+          { firefly_id: "10", external_id: "row-1", amount_ils: "-12.34", status: "cleared" }
+        ]
+      }
+    });
+
+    expect(mock.history.put).toHaveLength(1);
+    expect(result.updated_count).toBe(1);
+    expect(result.failed_count).toBe(0);
+    expect(result.results[0].status).toBe("cleared");
+  });
+
+  test("apply_review_decisions: dry-run does not count rows as updated", async () => {
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      external_id: "row-1",
+      tags: ["credit-card", "needs-investigation"]
+    }));
+
+    const result = await t("apply_review_decisions").handler({
+      dry_run: true,
+      decisions: {
+        suspicious_transactions: [
+          { firefly_id: "10", external_id: "row-1", status: "cleared" }
+        ]
+      }
+    });
+
+    expect(mock.history.put).toHaveLength(0);
+    expect(result.updated_count).toBe(0);
+    expect(result.failed_count).toBe(0);
+    expect(result.dry_run_count).toBe(1);
+    expect(result.results[0].status).toBe("dry-run");
+  });
+
+  test("apply_review_decisions: explicit status overrides legacy approve decision", async () => {
+    const result = await t("apply_review_decisions").handler({
+      decisions: {
+        suspicious_transactions: [
+          { firefly_id: "10", external_id: "row-1", status: "investigate", decision: "approve" }
+        ]
+      }
+    });
+
+    expect(mock.history.get).toHaveLength(0);
+    expect(mock.history.put).toHaveLength(0);
+    expect(result.updated_count).toBe(0);
+    expect(result.failed_count).toBe(0);
+    expect(result.results).toEqual([]);
+  });
+
+  test("apply_review_decisions: accepts legacy external ID when statement row matches", async () => {
+    const notes = {
+      statement_row_id: "cal:2998:4880:2026-05-06:0002",
+      source_document_id: "2998",
+      issuer: "cal",
+      card_last4: "4880"
+    };
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      external_id: "legacy-external-id",
+      notes,
+      tags: ["credit-card", "needs-investigation"]
+    }));
+    mock.onPut("/transactions/10").reply(200, { ok: true });
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      external_id: "legacy-external-id",
+      notes,
+      tags: ["credit-card", "reviewed", "cleared-by-alex"]
+    }));
+
+    const result = await t("apply_review_decisions").handler({
+      decisions: {
+        suspicious_transactions: [
+          {
+            firefly_id: "10",
+            external_id: "new-external-id",
+            statement_row_id: "cal:2998:4880:2026-05-06:0002",
+            source_document_id: "2998",
+            issuer: "cal",
+            card_last4: "4880",
+            transaction_date: "2026-05-06",
+            amount_ils: "58.72",
+            status: "cleared"
+          }
+        ]
+      }
+    });
+
+    expect(mock.history.put).toHaveLength(1);
+    expect(result.updated_count).toBe(1);
+    expect(result.failed_count).toBe(0);
+    expect(result.results[0].status).toBe("cleared");
+  });
+
+  test("apply_review_decisions: rejects same statement row with wrong source metadata", async () => {
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      external_id: "legacy-external-id",
+      notes: {
+        statement_row_id: "cal:2998:4880:2026-05-06:0002",
+        source_document_id: "WRONG",
+        issuer: "cal",
+        card_last4: "4880"
+      },
+      tags: ["credit-card", "needs-investigation"]
+    }));
+
+    const result = await t("apply_review_decisions").handler({
+      decisions: {
+        suspicious_transactions: [
+          {
+            firefly_id: "10",
+            external_id: "new-external-id",
+            statement_row_id: "cal:2998:4880:2026-05-06:0002",
+            source_document_id: "2998",
+            issuer: "cal",
+            card_last4: "4880",
+            status: "cleared"
+          }
+        ]
+      }
+    });
+
+    expect(mock.history.put).toHaveLength(0);
+    expect(result.updated_count).toBe(0);
+    expect(result.failed_count).toBe(1);
+    expect(result.results[0].status).toBe("identity-mismatch");
+    expect(result.results[0].mismatched_fields).toEqual(["source_document_id"]);
   });
 
   test("delete_transaction: DELETE /transactions/:id", async () => {

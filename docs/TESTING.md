@@ -10,7 +10,7 @@ npm test
 
 ## Test Coverage
 
-The suite has **82 tests** across **15 describe blocks**, covering all 69 tools:
+The suite has **89 tests** across **15 describe blocks**, covering all 69 tools:
 
 | Module        | Tests | What is verified |
 |---------------|-------|-----------------|
@@ -18,7 +18,7 @@ The suite has **82 tests** across **15 describe blocks**, covering all 69 tools:
 | MCP Server    | 3     | Protocol routing, ListTools, CallTool, error wrapping |
 | Core          | 1     | `get_about` |
 | Accounts      | 6     | Full CRUD + type filtering |
-| Transactions  | 13    | Full CRUD, split creation, compact reads, verified tag clearing, approval-decision clearing, search, date handling |
+| Transactions  | 21    | Full CRUD, split creation, compact reads, verified tag clearing, approval-decision clearing, search, date handling |
 | Budgets       | 8     | Full CRUD + limits CRUD |
 | Automation    | 11    | Rules CRUD, rule groups, webhooks |
 | System        | 8     | Currencies CRUD, preferences CRUD |
