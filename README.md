@@ -2,7 +2,7 @@
 
 A professional-grade, AI-agnostic bridge providing exhaustive 100% API coverage for connecting AI assistants to your [Firefly III](https://github.com/firefly-iii/firefly-iii) personal finance instance.
 
-**66 tools** covering every major Firefly III capability: accounts, transactions, budgets, bills, recurring rules, automation, insights, attachments, currencies, and more.
+**69 tools** covering every major Firefly III capability: accounts, transactions, budgets, bills, recurring rules, automation, insights, attachments, currencies, and more.
 
 ---
 
@@ -224,7 +224,7 @@ Available endpoints:
 | :--- | :---: | :--- |
 | Core | 1 | System info & connectivity |
 | Accounts | 5 | Full CRUD for all account types |
-| Transactions | 7 | CRUD, split transactions, search |
+| Transactions | 10 | CRUD, split transactions, compact reads, verified tag clearing, approval-decision clearing, search |
 | Budgets | 8 | Budgets + monetary limits |
 | Bills & Piggy Banks | 7 | Bill tracking + savings goals |
 | Automation | 11 | Rules, rule groups, webhooks |
@@ -234,7 +234,7 @@ Available endpoints:
 | Meta | 4 | Categories + tags |
 | Object Groups | 2 | Account/piggy bank organization |
 | Admin | 1 | Data export |
-| **Total** | **66** | |
+| **Total** | **69** | |
 
 ---
 
@@ -242,10 +242,10 @@ Available endpoints:
 
 | Document | Description |
 | :--- | :--- |
-| [docs/API.md](docs/API.md) | Complete reference for all 66 tools and their input schemas |
+| [docs/API.md](docs/API.md) | Complete reference for all 69 tools and their input schemas |
 | [docs/PROMPTS.md](docs/PROMPTS.md) | Prompt examples for common financial tasks |
 | [docs/USE_CASES.md](docs/USE_CASES.md) | Strategic guides: tax assistant, subscription auditor, receipt manager |
-| [docs/TESTING.md](docs/TESTING.md) | Test suite documentation (78 tests, all tools covered) |
+| [docs/TESTING.md](docs/TESTING.md) | Test suite documentation (82 tests, all tools covered) |
 | [CLAUDE.md](CLAUDE.md) | Claude Code & Claude Desktop setup guide |
 | [gemini.md](gemini.md) | Gemini CLI extension guide |
 
@@ -257,7 +257,7 @@ Available endpoints:
 npm test
 ```
 
-78 tests covering all 66 tools. No live Firefly III instance required — all API calls are mocked.
+82 tests covering all 69 tools. No live Firefly III instance required — all API calls are mocked.
 See [docs/TESTING.md](docs/TESTING.md) for details.
 
 ---

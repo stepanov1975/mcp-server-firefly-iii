@@ -1,6 +1,6 @@
 # Firefly III MCP Tool Reference (v3.0.0 DEFINITIVE)
 
-This document provides a definitive list of all 66 tools available in the Firefly III AI Bridge.
+This document provides a definitive list of all 69 tools available in the Firefly III AI Bridge.
 
 ## 🛠️ Tool Registry
 
@@ -10,9 +10,12 @@ This document provides a definitive list of all 66 tools available in the Firefl
 ### 💸 Transactions (Exhaustive)
 - `list_transactions`: History retrieval with pagination.
 - `get_transaction`: Deep-dive into a specific transaction.
+- `get_transactions_compact`: Batch/compact transaction rows by IDs or date window, with source-document, external-ID, account-name, and tag filters.
 - `create_transaction`: Intelligent recording (Simple).
 - `create_split_transaction`: Create a single entry with multiple categories/amounts (e.g., one grocery receipt split into Food and Household).
 - `update_transaction`: Correct transaction group descriptions.
+- `update_transaction_tags_verified`: Verified tag update path using GET → PUT full transaction payload → GET readback.
+- `apply_review_decisions`: Apply cleared suspicious-row decisions, clear active review tags, add reviewed/cleared tags, and verify readback.
 - `delete_transaction`: Remove financial records.
 - `search_transactions`: Powerful query-based search.
 

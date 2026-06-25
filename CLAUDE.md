@@ -1,6 +1,6 @@
 # Firefly III MCP Server — Claude Code Guide
 
-MCP server bridging Firefly III personal finance manager to AI assistants. 66 tools, Node.js, fully tested (78 tests).
+MCP server bridging Firefly III personal finance manager to AI assistants. 69 tools, Node.js, fully tested (82 tests).
 
 ---
 
@@ -97,7 +97,7 @@ Restart Claude Desktop after saving.
 ## Project Commands
 
 ```bash
-npm test                   # Run 78-test suite (all mocked, no live Firefly needed)
+npm test                   # Run 82-test suite (all mocked, no live Firefly needed)
 node index.js              # Start in stdio mode (MCP clients: Claude Code, Gemini CLI)
 PORT=3001 node index.js    # Start in HTTP/SSE mode (ChatGPT Actions, REST clients)
 docker build -t mcp .      # Build Docker image
@@ -115,7 +115,7 @@ src/
   tools/
     core.js           # get_about (1)
     accounts.js       # CRUD (5)
-    transactions.js   # CRUD + split + search (7)
+    transactions.js   # CRUD + split + compact reads + verified tag clearing + search (10)
     budgets.js        # Budgets + limits CRUD (8)
     automation.js     # Rules, rule groups, webhooks (11)
     system.js         # Currencies + preferences CRUD (8)
@@ -134,7 +134,7 @@ Each tool file exports an array of `{ name, description, inputSchema, handler }`
 ## Adding a New Tool
 
 1. Add the tool object to the relevant `src/tools/*.js` file
-2. Update the tool count assertion in `index.test.js`: `expect(TOOLS.length).toBe(66)` → new count
+2. Update the tool count assertion in `index.test.js`: `expect(TOOLS.length).toBe(69)` → new count
 3. Add a test: verify HTTP method, URL path, and request payload
 4. Update `docs/API.md`
 
@@ -146,7 +146,7 @@ Each tool file exports an array of `{ name, description, inputSchema, handler }`
 
 **Query params must use axios `{ params }` option**, not string interpolation. `apiClient.get(\`/path?x=${x}\`)` causes 404s from the mock adapter and can break reverse proxies. Always use `apiClient.get("/path", { params: { x } })`.
 
-**Tool count is enforced in tests.** Adding or removing a tool without updating `expect(TOOLS.length).toBe(66)` fails the suite — intentional guard.
+**Tool count is enforced in tests.** Adding or removing a tool without updating `expect(TOOLS.length).toBe(69)` fails the suite — intentional guard.
 
 **stdio vs HTTP mode** — without `PORT` the server speaks MCP over stdin/stdout. With `PORT` it starts Express with `/sse`, `/messages`, `/api/<tool>`, and `/openapi.json`.
 
@@ -160,5 +160,5 @@ Each tool file exports an array of `{ name, description, inputSchema, handler }`
 npm test
 ```
 
-78 tests, 15 describe blocks, all 66 tools covered. No live Firefly III required.
+82 tests, 15 describe blocks, all 69 tools covered. No live Firefly III required.
 See [`docs/TESTING.md`](docs/TESTING.md) for the full coverage table.

@@ -8,19 +8,44 @@ const mock = new axiosMockAdapter(apiClient);
 // Helper: find a tool by name
 const t = (name) => TOOLS.find(tool => tool.name === name);
 
+function transactionPayload({ id = "10", tags = [], notes = {}, external_id = "row-1" } = {}) {
+  return {
+    data: {
+      id,
+      attributes: {
+        transactions: [
+          {
+            transaction_journal_id: "100",
+            type: "withdrawal",
+            date: "2026-05-06T00:00:00+03:00",
+            amount: "58.72",
+            description: "OPENAI",
+            source_name: "VISA Cal 4880",
+            destination_name: "OPENAI",
+            category_name: null,
+            tags,
+            notes: JSON.stringify(notes),
+            external_id
+          }
+        ]
+      }
+    }
+  };
+}
+
 beforeEach(() => mock.reset());
 
 // ---------------------------------------------------------------------------
 // 1. TOOL REGISTRY
 // ---------------------------------------------------------------------------
 describe("Tool Registry", () => {
-  test("registers exactly 66 tools", () => {
-    expect(TOOLS.length).toBe(66);
+  test("registers exactly 69 tools", () => {
+    expect(TOOLS.length).toBe(69);
   });
 
   test("all tool names are unique", () => {
     const names = TOOLS.map(tool => tool.name);
-    expect(new Set(names).size).toBe(66);
+    expect(new Set(names).size).toBe(69);
   });
 
   test("every tool has name, description, inputSchema, and handler", () => {
@@ -57,7 +82,7 @@ describe("MCP Server", () => {
   test("ListToolsRequestSchema handler omits handler functions", async () => {
     const handler = mcpServer._requestHandlers.get("tools/list");
     const response = await handler({ method: "tools/list" });
-    expect(response.tools.length).toBe(66);
+    expect(response.tools.length).toBe(69);
     expect(response.tools[0].handler).toBeUndefined();
   });
 });
@@ -146,6 +171,72 @@ describe("Transactions", () => {
     expect(result.id).toBe(99);
   });
 
+  test("get_transactions_compact: returns filtered compact rows by direct IDs", async () => {
+    mock.onGet("/transactions/10").reply(200, transactionPayload({
+      id: "10",
+      tags: ["credit-card", "source-paperless-2998"],
+      notes: {
+        issuer: "cal",
+        source_document_id: "2998",
+        statement_date: "2026-06-02",
+        statement_row_id: "cal:2998:4880:2026-05-06:0002",
+        card_last4: "4880"
+      },
+      external_id: "ccstmt:cal:2998:row-1"
+    }));
+    mock.onGet("/transactions/11").reply(200, transactionPayload({
+      id: "11",
+      tags: ["credit-card"],
+      notes: { source_document_id: "2999" },
+      external_id: "ccstmt:cal:2999:row-1"
+    }));
+
+    const result = await t("get_transactions_compact").handler({
+      ids: ["10", "11"],
+      source_document_id: "2998",
+      tags: ["source-paperless-2998"]
+    });
+
+    expect(mock.history.get.map(req => req.url)).toEqual(["/transactions/10", "/transactions/11"]);
+    expect(result.count).toBe(1);
+    expect(result.transactions[0]).toMatchObject({
+      group_id: "10",
+      transaction_journal_id: "100",
+      date: "2026-05-06",
+      amount: "58.72",
+      description: "OPENAI",
+      source_document_id: "2998",
+      statement_row_id: "cal:2998:4880:2026-05-06:0002",
+      external_id: "ccstmt:cal:2998:row-1"
+    });
+    expect(result.transactions[0].notes).toBeUndefined();
+  });
+
+  test("get_transactions_compact: pages history with query params", async () => {
+    mock.onGet("/transactions").replyOnce(200, {
+      data: [transactionPayload({ id: "1", tags: ["credit-card"], notes: { source_document_id: "2998" } }).data],
+      meta: { pagination: { total_pages: 2 } }
+    });
+    mock.onGet("/transactions").replyOnce(200, {
+      data: [transactionPayload({ id: "2", tags: ["other"], notes: { source_document_id: "2998" } }).data],
+      meta: { pagination: { total_pages: 2 } }
+    });
+
+    const result = await t("get_transactions_compact").handler({
+      start: "2026-05-01",
+      end: "2026-05-31",
+      source_document_id: "2998",
+      tags: ["credit-card"],
+      limit: 50,
+      max_pages: 5
+    });
+
+    expect(mock.history.get[0].params).toEqual({ limit: 50, page: 1, start: "2026-05-01", end: "2026-05-31" });
+    expect(mock.history.get[1].params).toEqual({ limit: 50, page: 2, start: "2026-05-01", end: "2026-05-31" });
+    expect(result.count).toBe(1);
+    expect(result.transactions[0].group_id).toBe("1");
+  });
+
   test("create_transaction: POST /transactions with correct envelope", async () => {
     mock.onPost("/transactions").reply(201, {});
     await t("create_transaction").handler({
@@ -194,6 +285,72 @@ describe("Transactions", () => {
     const body = JSON.parse(mock.history.put[0].data);
     expect(body.id).toBeUndefined();
     expect(body.description).toBe("Fixed");
+  });
+
+  test("update_transaction_tags_verified: clears tags with readback verification", async () => {
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      tags: ["credit-card", "risk-review", "notify-manual-review", "source-paperless-2998"]
+    }));
+    mock.onPut("/transactions/10").reply(200, { ok: true });
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      tags: ["credit-card", "source-paperless-2998", "reviewed", "cleared-by-alex"]
+    }));
+
+    const result = await t("update_transaction_tags_verified").handler({
+      transaction_id: "10",
+      remove_tags: ["notify-manual-review"],
+      remove_prefixes: ["risk-"],
+      add_tags: ["reviewed", "cleared-by-alex"]
+    });
+
+    const body = JSON.parse(mock.history.put[0].data);
+    expect(body.apply_rules).toBe(false);
+    expect(body.fire_webhooks).toBe(false);
+    expect(body.transactions[0].date).toBe("2026-05-06");
+    expect(body.transactions[0].tags).toEqual(["credit-card", "source-paperless-2998", "reviewed", "cleared-by-alex"]);
+    expect(result.status).toBe("updated");
+    expect(result.active_review_tags_left).toEqual([]);
+    expect(result.missing_expected_tags).toEqual([]);
+  });
+
+  test("apply_review_decisions: clears only approved rows and reports skipped missing IDs", async () => {
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      tags: ["credit-card", "needs-investigation", "new-merchant", "risk-review", "notify-manual-review"]
+    }));
+    mock.onPut("/transactions/10").reply(200, { ok: true });
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      tags: ["credit-card", "reviewed", "cleared-by-alex"]
+    }));
+
+    const result = await t("apply_review_decisions").handler({
+      decisions: {
+        suspicious_transactions: [
+          { firefly_id: "10", external_id: "row-1", status: "cleared" },
+          { external_id: "row-2", status: "cleared" },
+          { firefly_id: "12", external_id: "row-3", status: "investigate" }
+        ]
+      }
+    });
+
+    expect(mock.history.get.map(req => req.url)).toEqual(["/transactions/10", "/transactions/10"]);
+    expect(mock.history.put).toHaveLength(1);
+    expect(result.updated_count).toBe(1);
+    expect(result.failed_count).toBe(1);
+    expect(result.results).toEqual([
+      {
+        firefly_id: "10",
+        external_id: "row-1",
+        status: "cleared",
+        tags: ["credit-card", "reviewed", "cleared-by-alex"],
+        active_review_tags_left: [],
+        missing_expected_tags: []
+      },
+      { external_id: "row-2", status: "skipped-missing-firefly-id" }
+    ]);
   });
 
   test("delete_transaction: DELETE /transactions/:id", async () => {
