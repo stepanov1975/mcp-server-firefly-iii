@@ -247,7 +247,7 @@ Available endpoints:
 | [docs/API.md](docs/API.md) | Complete reference for all 69 tools and their input schemas |
 | [docs/PROMPTS.md](docs/PROMPTS.md) | Prompt examples for common financial tasks |
 | [docs/USE_CASES.md](docs/USE_CASES.md) | Strategic guides: tax assistant, subscription auditor, receipt manager |
-| [docs/TESTING.md](docs/TESTING.md) | Test suite documentation (89 tests, all tools covered) |
+| [docs/TESTING.md](docs/TESTING.md) | Test suite documentation (90 tests, all tools covered) |
 | [CLAUDE.md](CLAUDE.md) | Claude Code & Claude Desktop setup guide |
 | [gemini.md](gemini.md) | Gemini CLI extension guide |
 
@@ -259,7 +259,7 @@ Available endpoints:
 npm test
 ```
 
-89 tests covering all 69 tools. No live Firefly III instance required — all API calls are mocked.
+90 tests covering all 69 tools. No live Firefly III instance required — all API calls are mocked.
 See [docs/TESTING.md](docs/TESTING.md) for details.
 
 ---

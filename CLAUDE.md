@@ -1,6 +1,6 @@
 # Firefly III MCP Server — Claude Code Guide
 
-MCP server bridging Firefly III personal finance manager to AI assistants. 69 tools, Node.js, fully tested (89 tests).
+MCP server bridging Firefly III personal finance manager to AI assistants. 69 tools, Node.js, fully tested (90 tests).
 
 ---
 
@@ -160,5 +160,5 @@ Each tool file exports an array of `{ name, description, inputSchema, handler }`
 npm test
 ```
 
-89 tests, 15 describe blocks, all 69 tools covered. No live Firefly III required.
+90 tests, 15 describe blocks, all 69 tools covered. No live Firefly III required.
 See [`docs/TESTING.md`](docs/TESTING.md) for the full coverage table.

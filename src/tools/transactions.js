@@ -196,6 +196,33 @@ function transactionPayloadWithTags(transaction, tags) {
   return { apply_rules: false, fire_webhooks: false, transactions: [payloadRow] };
 }
 
+function transactionPayloadWithUpdates(transaction, updates) {
+  const tags = Object.prototype.hasOwnProperty.call(updates, "tags")
+    ? uniqueStrings(updates.tags)
+    : uniqueStrings(transaction.tags || []);
+  const payload = transactionPayloadWithTags(transaction, tags);
+  const payloadRow = payload.transactions[0];
+  if (Object.prototype.hasOwnProperty.call(updates, "description")) payloadRow.description = updates.description;
+  if (Object.prototype.hasOwnProperty.call(updates, "category_name")) payloadRow.category_name = updates.category_name;
+  return payload;
+}
+
+function transactionUpdateMismatches(transaction, updates) {
+  const mismatches = [];
+  if (Object.prototype.hasOwnProperty.call(updates, "description") && transaction.description !== updates.description) {
+    mismatches.push("description");
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, "category_name") && transaction.category_name !== updates.category_name) {
+    mismatches.push("category_name");
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, "tags")) {
+    const expectedTags = uniqueStrings(updates.tags).sort();
+    const actualTags = uniqueStrings(transaction.tags || []).sort();
+    if (JSON.stringify(actualTags) !== JSON.stringify(expectedTags)) mismatches.push("tags");
+  }
+  return mismatches;
+}
+
 function reviewDecisionIdentityMismatches(decision, transaction) {
   const mismatches = [];
   const expectedExternalId = decision.external_id;
@@ -450,8 +477,14 @@ const transactionsTools = [
       required: ["id"]
     },
     handler: async (args) => {
-      const { id, ...data } = args;
-      return (await apiClient.put(`/transactions/${id}`, data)).data;
+      const { id, ...updates } = args;
+      const current = (await apiClient.get(`/transactions/${id}`)).data;
+      const transaction = firstTransaction(current);
+      await apiClient.put(`/transactions/${id}`, transactionPayloadWithUpdates(transaction, updates));
+      const verified = (await apiClient.get(`/transactions/${id}`)).data;
+      const mismatches = transactionUpdateMismatches(firstTransaction(verified), updates);
+      if (mismatches.length) throw new Error(`Firefly transaction update verification failed: ${mismatches.join(", ")}`);
+      return verified;
     }
   },
   {

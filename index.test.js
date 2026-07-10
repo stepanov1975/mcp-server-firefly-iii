@@ -8,7 +8,7 @@ const mock = new axiosMockAdapter(apiClient);
 // Helper: find a tool by name
 const t = (name) => TOOLS.find(tool => tool.name === name);
 
-function transactionPayload({ id = "10", tags = [], notes = {}, external_id = "row-1", type = "withdrawal", amount = "58.72" } = {}) {
+function transactionPayload({ id = "10", tags = [], notes = {}, external_id = "row-1", type = "withdrawal", amount = "58.72", description = "OPENAI" } = {}) {
   return {
     data: {
       id,
@@ -19,7 +19,7 @@ function transactionPayload({ id = "10", tags = [], notes = {}, external_id = "r
             type,
             date: "2026-05-06T00:00:00+03:00",
             amount,
-            description: "OPENAI",
+            description,
             source_name: "VISA Cal 4880",
             destination_name: "OPENAI",
             category_name: null,
@@ -300,13 +300,35 @@ describe("Transactions", () => {
     expect(body.transactions[0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  test("update_transaction: PUT /transactions/:id, strips id from body", async () => {
+  test("update_transaction: GET → PUT full payload → GET verification", async () => {
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({ id: "10", tags: ["credit-card"] }));
     mock.onPut("/transactions/10").reply(200, {});
-    await t("update_transaction").handler({ id: "10", description: "Fixed" });
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({
+      id: "10",
+      tags: ["credit-card"],
+      description: "Fixed"
+    }));
+
+    const result = await t("update_transaction").handler({ id: "10", description: "Fixed" });
+
     expect(mock.history.put[0].url).toBe("/transactions/10");
     const body = JSON.parse(mock.history.put[0].data);
-    expect(body.id).toBeUndefined();
-    expect(body.description).toBe("Fixed");
+    expect(body.apply_rules).toBe(false);
+    expect(body.fire_webhooks).toBe(false);
+    expect(body.transactions[0].description).toBe("Fixed");
+    expect(body.transactions[0].source_name).toBe("VISA Cal 4880");
+    expect(body.transactions[0].destination_name).toBe("OPENAI");
+    expect(body.transactions[0].tags).toEqual(["credit-card"]);
+    expect(result.data.attributes.transactions[0].description).toBe("Fixed");
+  });
+
+  test("update_transaction: rejects stale readback", async () => {
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({ id: "10" }));
+    mock.onPut("/transactions/10").reply(200, {});
+    mock.onGet("/transactions/10").replyOnce(200, transactionPayload({ id: "10" }));
+
+    await expect(t("update_transaction").handler({ id: "10", description: "Fixed" }))
+      .rejects.toThrow("update verification failed: description");
   });
 
   test("update_transaction_tags_verified: clears tags with readback verification", async () => {

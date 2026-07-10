@@ -13,7 +13,7 @@ This document lists the 69 tools available in the Firefly III AI Bridge.
 - `get_transactions_compact`: Batch/compact transaction rows by IDs or a paged date window, with source-document, external-ID, account-name, and tag filters. The source-document filter also recognizes `source-paperless-<id>` tags, and paged reads return `pages_fetched`, `total_pages`, `max_pages`, and `truncated` metadata.
 - `create_transaction`: Intelligent recording (Simple).
 - `create_split_transaction`: Create a single entry with multiple categories/amounts (e.g., one grocery receipt split into Food and Household).
-- `update_transaction`: Correct transaction group descriptions.
+- `update_transaction`: Correct transaction descriptions/categories/tags through a verified GET → full-payload PUT → GET readback, preserving untouched transaction fields.
 - `update_transaction_tags_verified`: Verified tag update path using GET → PUT full transaction payload → GET readback.
 - `apply_review_decisions`: Apply cleared suspicious-row decisions, clear active review tags, add reviewed/cleared tags, and verify readback.
 - `delete_transaction`: Remove financial records.
